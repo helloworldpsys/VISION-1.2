@@ -1,8 +1,14 @@
 SpeechRecognition
 PyAudio
-opencv-python
-numpy
-ollama
 edge-tts
-mediapipe
-certifi
+pygame
+pyttsx3
+requests
+psutil
+Pillow
+numpy
+opencv-python
+pycaw
+comtypes
+# optional: hand-gesture control (python 3.10-3.12 only)
+mediapipe; python_version < "3.13"
