@@ -1,8 +1,20 @@
-SpeechRecognition
-PyAudio
-opencv-python
-numpy
-ollama
-edge-tts
-mediapipe
-certifi
+# Vision 2.0 runtime dependencies - pinned for reproducible installs.
+# Python 3.10, 3.11 or 3.12 is required (MediaPipe does not support 3.13+ yet).
+#
+# PyAudio is the preferred microphone backend; sounddevice is the fallback.
+# On Debian/Ubuntu install portaudio19-dev before running pip.
+SpeechRecognition==3.10.4
+PyAudio==0.2.14
+sounddevice==0.4.7
+vosk==0.3.45
+
+# Interface / camera
+opencv-python==4.10.0.84
+numpy==1.26.4
+mediapipe==0.10.14
+
+# Voice + configuration
+edge-tts==6.1.12
+certifi==2024.8.30
+python-dotenv==1.0.1
+platformdirs==4.3.6
