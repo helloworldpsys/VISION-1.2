@@ -17,6 +17,7 @@ from .config import Config
 from .llm import OllamaClient
 from .logging_setup import get_logger, setup_logging
 from .memory import MemoryStore, MemoryStoreError
+from .onboarding import collect_checks, format_checks, run_setup
 from .parser import Intent, detect_intent, is_wake_phrase, prepare_command
 from .platform_utils import create_platform
 from .state import SpeakingState
@@ -53,6 +54,28 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print platform/configuration diagnostics and exit.",
     )
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Interactively create or update .env, then exit.",
+    )
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Check microphone, camera, Ollama and system tools, then exit.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Accept defaults during --setup (non-interactive).",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Update an existing .env without asking.",
+    )
+    parser.add_argument("--vosk-model-url", help=argparse.SUPPRESS)
+    parser.add_argument("--vosk-sha256", help=argparse.SUPPRESS)
     return parser
 
 
@@ -72,6 +95,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     platform = create_platform()
     logger.info("Vision %s starting on %s", __version__, platform.os_name)
     logger.info("Data directory: %s", config.data_dir)
+
+    if args.setup:
+        return run_setup(
+            env_path=args.env_file or ".env",
+            assume_yes=args.yes,
+            force=args.force,
+            vosk_url=args.vosk_model_url,
+            vosk_sha256=args.vosk_sha256,
+            platform=platform,
+        )
+
+    if args.doctor:
+        checks = collect_checks(config, platform, env_path=args.env_file or ".env")
+        return format_checks(checks)
 
     if args.diagnose:
         return _diagnose(config, platform)
@@ -127,6 +164,9 @@ def _open_memory(config: Config) -> MemoryStore:
 def _build_speech(config: Config, force_text: bool = False):
     if force_text:
         logger.info("Typed-command mode requested.")
+        return TextOnlySpeech(config)
+    if not config.microphone_enabled:
+        logger.info("MICROPHONE_ENABLED=false - using typed commands.")
         return TextOnlySpeech(config)
     try:
         return SpeechEngine(config)

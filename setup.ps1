@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Vision 2.0 bootstrap for Windows.
 
@@ -102,7 +102,7 @@ if ($LASTEXITCODE -ne 0) { Die "Dependency installation failed. See the error ab
 
 # Optional Windows-only absolute volume control.
 Write-Step "Installing optional Windows volume support (pycaw)..."
-& $venvPython -m pip install "pycaw>=20240210" "comtypes>=1.4.5"
+& $venvPython -m pip install "pycaw==20260927" "comtypes==1.5.0"
 if ($LASTEXITCODE -ne 0) {
     Write-Warn "pycaw install failed; Vision will use nircmd or media keys for volume."
 }
@@ -120,8 +120,10 @@ Write-Host @"
 Vision is installed.
 
   Activate:             .\.venv\Scripts\Activate.ps1
-  Start:                python vision.py
-  Typed mode (no mic):  python vision.py --text
+  Configure:            python -m vision --setup
+  Check capabilities:   python -m vision --doctor
+  Start:                python -m vision
+  Typed mode (no mic):  python -m vision --text
   Interface only:       python interface.py [--sd|--hd]
   Tests:                python -m pytest
   Lint/format:          ruff check . ; black --check .
@@ -135,4 +137,5 @@ Start Ollama and pull the model:
   ollama serve
   ollama pull llama3
 "@ -ForegroundColor Green
+
 

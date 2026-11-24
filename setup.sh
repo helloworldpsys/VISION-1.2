@@ -91,8 +91,10 @@ cat <<'EOF'
 Vision is installed.
 
   Activate the environment:  source .venv/bin/activate
-  Start the assistant:       python vision.py
-  Typed mode (no mic):       python vision.py --text
+  Configure:                 python -m vision --setup
+  Check capabilities:        python -m vision --doctor
+  Start the assistant:       python -m vision
+  Typed mode (no mic):       python -m vision --text
   Interface only:            python interface.py [--sd|--hd]
   Tests:                     python -m pytest
   Lint/format:               ruff check . && black --check .

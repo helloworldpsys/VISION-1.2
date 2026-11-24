@@ -9,6 +9,13 @@ from vision.audio import TextOnlySpeech
 from vision.config import Config
 
 
+def test_microphone_disabled_forces_text(tmp_path: Path) -> None:
+    config = Config(data_dir=tmp_path, microphone_enabled=False).resolved_paths()
+    speech = _build_speech(config)
+    assert isinstance(speech, TextOnlySpeech)
+    assert speech.degraded is True
+
+
 def test_force_text_mode(tmp_path: Path) -> None:
     config = Config(data_dir=tmp_path).resolved_paths()
     speech = _build_speech(config, force_text=True)
