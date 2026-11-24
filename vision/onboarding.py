@@ -223,6 +223,20 @@ def _ask_yes(question: str, default: bool, input_fn: Callable[[str], str]) -> bo
     return answer in {"y", "yes"}
 
 
+def read_env_values(path: str | Path) -> dict[str, str]:
+    """Parse ``KEY=value`` pairs without mutating ``os.environ``."""
+    source = Path(path)
+    values: dict[str, str] = {}
+    if not source.is_file():
+        return values
+    for line in source.read_text(encoding="utf-8").splitlines():
+        match = KEY_PATTERN.match(line)
+        if match:
+            _, _, raw = line.partition("=")
+            values[match.group(1)] = raw.strip()
+    return values
+
+
 def run_setup(
     *,
     env_path: str | Path,
@@ -239,7 +253,11 @@ def run_setup(
     """Interactively write a working ``.env``; returns a process exit code."""
     board = platform or create_platform()
     target = Path(env_path)
-    config = Config.load(env_file=target if target.exists() else None)
+    # Merge the file's existing values with the process environment without
+    # calling load_dotenv, which would leak values into os.environ for the rest
+    # of the process (and makes tests order-dependent).
+    merged_env = {**read_env_values(target), **os.environ}
+    config = Config.load(env=merged_env, load_env_file=False)
     probe = (body_probe or probe_ollama)(config.ollama_host)
 
     output(f"Vision setup - detected {board.os_name} with Python {sys.version.split()[0]}")

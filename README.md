@@ -193,7 +193,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the process/thread model, S
 python -m venv .venv
 source .venv/bin/activate          # Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
-pytest -q                          # 142 tests, no hardware required
+pytest -q                          # 144 tests, no hardware required
 ruff check .
 black --check .
 python -m build                    # sdist + wheel in dist/

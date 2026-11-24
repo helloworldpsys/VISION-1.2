@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import zipfile
 from pathlib import Path
 
@@ -128,6 +129,25 @@ def test_download_vosk_model_rejects_bad_checksum(tmp_path: Path) -> None:
             opener=fake_opener(build_model_zip()),
         )
     assert list(tmp_path.iterdir()) == []
+
+
+def test_read_env_values_ignores_comments(tmp_path: Path) -> None:
+    target = tmp_path / ".env"
+    target.write_text("# note\nOLLAMA_MODEL=old\n\nEMPTY=\n", encoding="utf-8")
+    assert onboarding.read_env_values(target) == {"OLLAMA_MODEL": "old", "EMPTY": ""}
+
+
+def test_run_setup_does_not_mutate_environment(tmp_path: Path, monkeypatch) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("OLLAMA_MODEL=old\n", encoding="utf-8")
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+    run_setup(
+        env_path=env_file,
+        assume_yes=True,
+        platform=create_platform("linux", runner=lambda *a, **k: None, which=lambda n: None),
+        body_probe=lambda host: OllamaProbe(False, (), "offline"),
+    )
+    assert "OLLAMA_MODEL" not in os.environ
 
 
 # --------------------------------------------------------------------- doctor
