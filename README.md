@@ -1,71 +1,51 @@
-# Vision — a cross-platform voice assistant with a holographic interface
+# Vision
 
-Clap twice (or say **“Hey Vision”**) and an animated holographic interface opens.
-It stays blue while idle and turns **red while Vision is speaking**. Talk to it
-in English, Hindi or Hinglish. Vision answers anything else through a local LLM
-running in [Ollama](https://ollama.com) — no API key required.
+**A cross-platform voice assistant with a holographic interface.** Double-clap or say “Hey Vision” and a reactive OpenCV hologram opens; speak a command and it runs.
 
-> **Vision 2.0 is a ground-up hardening of Vision 1.2.** The assistant is now a
-> Python package, runs on **macOS, Windows and Linux**, survives missing
-> microphones and offline networks, stores memory in **SQLite**, and ships with
-> **120+ unit tests**, linting and a CI workflow.
+What sets it apart: free-form questions go to a **local Ollama model**, speech recognition falls back to **offline Vosk**, and the hologram reacts to **hand gestures** — no cloud API keys and no telemetry.
 
----
+[![CI](https://github.com/helloworldpsys/VISION-1.2/actions/workflows/ci.yml/badge.svg)](https://github.com/helloworldpsys/VISION-1.2/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%E2%80%933.12-blue)](#quick-start)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](#platform-support)
+[![Tests](https://img.shields.io/badge/tests-120%2B-brightgreen)](#development)
 
-## Highlights
+<p align="center">
+  <img src="docs/demo.gif" alt="Vision: double clap opens the holographic interface, then a voice command runs" width="720">
+</p>
 
-| Area | Vision 1.2 | Vision 2.0 |
-|---|---|---|
-| Platforms | macOS only (`say`, `afplay`, `osascript`, `screencapture`) | macOS, Windows, Linux via `vision/platform_utils.py` |
-| Structure | two 700–1,100-line scripts | `vision/` package with one concern per module |
-| Config | edit constants in `vision.py` | `.env` / environment variables, `.env.example` |
-| Memory | rewritten `memory.json` | SQLite (WAL) with JSON migration |
-| Microphone | PyAudio or crash | PyAudio → sounddevice → typed commands |
-| Speech-to-text | Google only (online) | Google + offline Vosk fallback |
-| Errors | `print(...)` to a scrolling terminal | rotating `vision.log` + graceful degradation |
-| Tests | none | parser, memory, platform, config, state, LLM, actions |
-| Docs | setup guide | setup + developer guide + architecture + contributing |
+<!-- TODO: record a 10-second demo GIF showing double-clap → hologram → voice command -->
 
 ## Features
 
-- **Activation:** double clap, or the wake phrase “Hey Vision”.
-- **Holographic UI:** animated OpenCV hologram; optional MediaPipe hand tracking
-  (one hand rotates, a two-hand pinch zooms). Mouse and keyboard controls work
-  without a camera.
-- **Commands:** open apps/sites, search Google/YouTube, play a song, take a
-  screenshot or photo, create/open folders, volume, battery, notes, memory,
-  interface controls, sleep and shutdown. English and Hinglish are supported.
-- **Local AI:** any unrecognised request is answered by Ollama.
-- **Natural voice:** `edge-tts` neural voice with an automatic native fallback
-  (`say` / SAPI / `espeak-ng`).
-- **Privacy:** memory, screenshots and photos stay on your machine. No telemetry.
-
----
-
-## Requirements
-
-- **Python 3.10, 3.11 or 3.12** (MediaPipe does not support 3.13+ yet).
-- A microphone; a camera is optional (hand tracking and photos).
-- [Ollama](https://ollama.com/download) with a model pulled (`ollama pull llama3`).
-- Optional system tools: `ffmpeg` (MP3 playback on Windows, audio conversion),
-  `sox` (metallic voice effect), `espeak-ng` (Linux native TTS).
+| Feature | What it does |
+|---|---|
+| Double-clap activation | Two claps 0.1–0.8 s apart open the interface without touching the keyboard. |
+| Wake phrase | “Hey Vision” (plus configurable variants) brings the assistant back from idle. |
+| Holographic UI | Animated OpenCV hologram: blue when idle, red while Vision speaks. |
+| Hand gestures | Optional MediaPipe tracking: one hand rotates the hologram, a two-hand pinch zooms. |
+| English / Hindi / Hinglish | The rule-based parser understands all three; unmatched text goes to the LLM. |
+| Local Ollama chat | Answers free-form questions through your own Ollama model. |
+| Offline Vosk STT | Optional local recognizer when Google’s free service is unavailable. |
+| SQLite memory | Names, notes and conversation history; one-time import of a Vision 1.2 `memory.json`. |
+| macOS / Windows / Linux | One platform adapter per OS; no macOS-only command paths remain. |
+| Audio fallback chain | PyAudio → sounddevice → typed commands instead of a crash. |
 
 ## Quick start
 
-### Automated setup (recommended)
+Python **3.10–3.12** is required (MediaPipe does not support 3.13+). A microphone and camera are optional — Vision degrades to typing and mouse control.
 
 **macOS / Linux**
 
 ```bash
 git clone https://github.com/helloworldpsys/VISION-1.2.git
 cd VISION-1.2
-bash setup.sh
+./setup.sh
 source .venv/bin/activate
-python vision.py
+python -m vision --setup
+python -m vision --doctor
+python -m vision
 ```
-
-The script installs PortAudio, ffmpeg and sox (via Homebrew / apt / dnf / pacman),
-creates `.venv`, installs the pinned requirements and copies `.env.example`.
 
 **Windows (PowerShell)**
 
@@ -73,67 +53,14 @@ creates `.venv`, installs the pinned requirements and copies `.env.example`.
 git clone https://github.com/helloworldpsys/VISION-1.2.git
 cd VISION-1.2
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
-python vision.py
+python -m vision --setup
+python -m vision --doctor
+python -m vision
 ```
 
-The script finds Python 3.10–3.12, installs the wheels, offers to install ffmpeg
-through `winget`, and installs `pycaw` for absolute volume control.
-
-### Manual setup
-
-```bash
-# 1. System libraries
-# macOS
-brew install portaudio sox ffmpeg
-# Debian / Ubuntu
-sudo apt install portaudio19-dev python3-dev libasound2-dev ffmpeg sox espeak-ng
-# Fedora
-sudo dnf install portaudio-devel alsa-lib-devel ffmpeg sox espeak-ng
-# Windows: ffmpeg from https://www.gyan.dev/ffmpeg/builds/ (add it to PATH)
-
-# 2. Python environment
-python3.12 -m venv .venv
-source .venv/bin/activate          # Windows: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# 3. Configuration
-cp .env.example .env               # edit CREATOR_NAME, OLLAMA_MODEL, ...
-
-# 4. Ollama
-ollama serve
-ollama pull llama3
-
-# 5. Run
-python vision.py
-```
-
-### Run modes
-
-```bash
-python vision.py                  # voice assistant (or `vision` after pip install)
-python -m vision                 # module entry point
-python vision.py --text           # typed commands, no microphone
-python vision.py --diagnose       # print platform/config/capability report
-python vision.py --no-interface   # voice only, no OpenCV window
-python vision.py --test-interface # UI only, press Enter to close
-python interface.py --sd          # standalone UI, 720p
-python interface.py --hd          # standalone UI, 1080p
-```
-
-### OS permissions
-
-**macOS** — *System Settings → Privacy & Security*: grant **Microphone**,
-**Camera**, **Accessibility/Automation** (volume) and **Screen Recording**
-(screenshots) to the terminal/IDE you launch Vision from, then fully restart it.
-
-**Windows** — *Settings → Privacy & security*: allow desktop apps to use the
-**Microphone** and **Camera**. Screenshots use the built-in .NET API and need no
-extra permission.
-
-**Linux** — make sure your user is in the `audio` group and PulseAudio/PipeWire
-is running. Install `gnome-screenshot`, `spectacle`, `scrot` or ImageMagick
-(`import`) for screenshots, and `pulseaudio-utils`/`alsa-utils` for volume.
+`--setup` writes a minimal `.env` and checks Ollama; `--doctor` prints a pass/fail line for microphone, camera, screenshots, volume, Ollama and the Vosk model (✅/❌ where the console supports UTF-8). Installing from a fork? Replace the clone URL. Existing scripts using `python vision.py` keep working — it is a compatibility shim around `python -m vision`.
 
 ## Example commands
 
@@ -142,7 +69,7 @@ is running. Install `gnome-screenshot`, `spectacle`, `scrot` or ImageMagick
 | “Open YouTube” / “youtube kholo” | opens YouTube |
 | “Play Believer” / “believer gana sunao” | opens YouTube results |
 | “Search Python tutorials on Google” | Google search |
-| “Take a screenshot” | saves to the data directory and opens it |
+| “Take a screenshot” | saves it to the data directory and opens it |
 | “Take a photo” / “selfie” | saves a webcam frame |
 | “Create a folder named projects” | creates it on the Desktop |
 | “Volume 40” / “increase volume” / “mute” | controls system volume |
@@ -152,196 +79,135 @@ is running. Install `gnome-screenshot`, `spectacle`, `scrot` or ImageMagick
 | “Close interface” / “Open interface” | controls the UI window |
 | “Go to sleep” | stops listening until “Hey Vision” |
 | “Stop Vision” | shuts down cleanly |
-| anything else | answered by Ollama |
+
+Anything not matched is answered by the local Ollama model, with your saved name and notes in the system prompt.
 
 ## Configuration
 
-All settings are environment variables, optionally loaded from `.env`. Both
-`VISION_FOO` and the legacy un-prefixed `FOO` forms are accepted. See
-[`.env.example`](.env.example) for the full, commented list.
+Settings come from the environment, optionally loaded from `.env`. Both `VISION_`-prefixed and legacy un-prefixed names work (`VISION_OLLAMA_MODEL` or `OLLAMA_MODEL`). See [`.env.example`](.env.example) for a commented template.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `CREATOR_NAME` | `Taha` | name Vision says it was created by |
-| `OLLAMA_MODEL` | `llama3` | any model pulled locally |
-| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama endpoint |
-| `TTS_ENGINE` | `edge` | `edge`, `native` or `none` |
-| `EDGE_VOICE` | `en-US-ChristopherNeural` | neural voice |
-| `STT_ENGINE` | `auto` | `auto`, `google`, `vosk` or `text` |
-| `PREFER_OFFLINE_STT` | `false` | try Vosk before Google |
-| `VOSK_MODEL_PATH` | *(empty)* | extracted Vosk model directory |
-| `CLAP_THRESHOLD` | `2000` | lower if claps are missed, raise if self-triggering |
-| `CLAP_ENABLED` | `true` | disable double-clap activation |
-| `WAKE_PHRASES` | `hey vision,...` | comma-separated wake phrases |
-| `INTERFACE_ARGS` | *(empty)* | e.g. `--hd` |
-| `DATA_DIR` | per-OS user data dir | memory, logs, captures |
-| `LOG_LEVEL` | `INFO` | `DEBUG` for troubleshooting |
+| Key | Default | Meaning | Valid range |
+|---|---|---|---|
+| `ASSISTANT_NAME` | `Vision` | Name Vision uses for itself | any text |
+| `CREATOR_NAME` | `Taha` | Name Vision credits as creator | any text |
+| `OLLAMA_MODEL` | `llama3` | Local model for chat | a pulled model |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama endpoint | http(s) URL |
+| `OLLAMA_TIMEOUT` | `60` | Request timeout (s) | > 0 |
+| `OLLAMA_RETRIES` | `2` | Retries after a failed request | ≥ 0 |
+| `TTS_ENGINE` | `edge` | Voice engine | `edge`, `native`, `none` |
+| `EDGE_VOICE` | `en-US-ChristopherNeural` | edge-tts voice id | a valid edge-tts voice |
+| `EDGE_RATE` | `-12%` | edge-tts speaking rate | edge-tts rate string |
+| `EDGE_PITCH` | `-18Hz` | edge-tts pitch | edge-tts pitch string |
+| `EDGE_VOLUME` | `+50%` | edge-tts volume | edge-tts volume string |
+| `PLAY_VOLUME` | `2.5` | Playback gain | 0–4 (macOS), 0–1 (ffplay) |
+| `SOX_EFFECT` | `true` | Metallic “Ultron” voice effect | `true` / `false` |
+| `NATIVE_VOICE` | — | OS voice name | any installed voice |
+| `NATIVE_RATE` | `150` | Native voice rate (words/min) | 80–450 on Linux, mapped on Windows |
+| `STT_ENGINE` | `auto` | Recognition engine | `auto`, `google`, `vosk`, `text` |
+| `STT_LANGUAGE` | `en-IN` | Google STT language | BCP-47 code |
+| `PREFER_OFFLINE_STT` | `false` | Try Vosk before Google | `true` / `false` |
+| `VOSK_MODEL_PATH` | — | Extracted Vosk model directory | existing directory |
+| `MICROPHONE_ENABLED` | `true` | Set to false for typed-only mode | `true` / `false` |
+| `MICROPHONE_DEVICE` | — | Input device index | ≥ 0, empty = default |
+| `CALIBRATION_INTERVAL` | `120` | Ambient-noise recalibration (s) | ≥ 10 |
+| `WAKE_LISTEN_TIMEOUT` | `4` | Wake-word listen window (s) | ≥ 1 |
+| `WAKE_PHRASE_TIME` | `3` | Max wake phrase length (s) | ≥ 1 |
+| `COMMAND_LISTEN_TIMEOUT` | `4` | Command listen window (s) | ≥ 1 |
+| `COMMAND_PHRASE_TIME` | `8` | Max command length (s) | ≥ 1 |
+| `MAX_AUDIO_FAILURES` | `3` | Capture errors before typed mode | ≥ 1 |
+| `CLAP_ENABLED` | `true` | Double-clap activation | `true` / `false` |
+| `CLAP_THRESHOLD` | `2000` | Clap RMS threshold | ~1000–4000 |
+| `CLAP_MIN_INTERVAL` | `0.1` | Minimum gap between claps (s) | < `CLAP_MAX_INTERVAL` |
+| `CLAP_MAX_INTERVAL` | `0.8` | Maximum gap between claps (s) | > `CLAP_MIN_INTERVAL` |
+| `CLAP_DEBOUNCE` | `0.05` | Ignore repeat peaks (s) | ≥ 0 |
+| `AUDIO_CHUNK` | `1024` | Frames per clap-detector block | > 0 |
+| `AUDIO_RATE` | `44100` | Clap-detector sample rate (Hz) | 8000–48000 |
+| `AUDIO_CHANNELS` | `1` | Clap-detector channels | `1` or `2` |
+| `INTERFACE_ARGS` | — | Extra UI flags | `--sd` (720p) or `--hd` (1080p) |
+| `INTERFACE_TIMEOUT` | `10` | Wait for the UI window (s) | > 0 |
+| `WAKE_PHRASES` | `hey vision, …` | Comma-separated wake phrases | lowercase phrases |
+| `DATA_DIR` | OS user-data dir | Memory, logs and captures | writable path |
+| `LOG_DIR` | `<DATA_DIR>/logs` | Rotating log directory | writable path |
+| `MEMORY_DB` | `<DATA_DIR>/memory.db` | SQLite database | writable path |
+| `STATE_FILE` | `<DATA_DIR>/state.txt` | UI speaking-state file | writable path |
+| `SCREENSHOT_DIR` | `<DATA_DIR>/screenshots` | Screenshot output | writable path |
+| `PHOTO_DIR` | `<DATA_DIR>/photos` | Webcam photo output | writable path |
+| `LEGACY_MEMORY_JSON` | `./memory.json` | Vision 1.2 memory to import once | path to JSON |
+| `LOG_LEVEL` | `INFO` | Log verbosity | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `LOG_MAX_BYTES` | `1000000` | Rotate after this size | > 0 |
+| `LOG_BACKUPS` | `5` | Rotated files to keep | ≥ 0 |
 
-### Where data lives
-
-| OS | Directory |
-|---|---|
-| Windows | `%LOCALAPPDATA%\Vision` |
-| macOS | `~/Library/Application Support/Vision` |
-| Linux | `${XDG_DATA_HOME:-~/.local/share}/vision` |
-
-`memory.db`, `state.txt`, `logs/vision.log`, `screenshots/` and `photos/` are
-created there. An existing Vision 1.2 `memory.json` is imported once and renamed
-to `memory.json.migrated`.
-
-### Offline mode
-
-Google’s free STT and `edge-tts` need internet. For a fully offline setup:
-
-1. Download and extract a Vosk model, e.g.
-   [vosk-model-small-en-us-0.15](https://alphacephei.com/vosk/models).
-2. Set `VOSK_MODEL_PATH=/path/to/vosk-model-small-en-us-0.15` and
-   `PREFER_OFFLINE_STT=true` (or `STT_ENGINE=vosk`).
-3. Set `TTS_ENGINE=native` to use the OS voice instead of Microsoft’s service.
-
-## Project structure
-
-```
-vision/
-├── __init__.py          # version only; no heavy imports
-├── __main__.py          # python -m vision
-├── config.py            # .env + environment -> immutable Config
-├── logging_setup.py     # rotating vision.log + console
-├── platform_utils.py    # macOS / Windows / Linux command backends
-├── state.py             # atomic speaking-state file shared with the UI
-├── audio.py             # PyAudio/sounddevice capture, Google/Vosk STT, clap
-├── tts.py               # edge-tts -> native fallback
-├── memory.py            # SQLite memory + JSON migration
-├── llm.py               # Ollama HTTP client (timeouts, retries)
-├── parser.py            # pure intent grammar (unit-tested)
-├── actions.py           # side effects for each intent
-├── ui.py                # launches the UI process
-├── interface_ui.py      # OpenCV hologram + MediaPipe hand tracking
-└── app.py               # wiring and main loops
-vision.py                # backwards-compatible entry point
-interface.py             # backwards-compatible UI entry point
-tests/                   # pytest suite (no hardware required)
-```
+Data lives in `%LOCALAPPDATA%\Vision` (Windows), `~/Library/Application Support/Vision` (macOS) or `${XDG_DATA_HOME:-~/.local/share}/vision` (Linux). An existing `memory.json` is imported once and renamed `memory.json.migrated`.
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full component map,
-thread/process model, SQLite schema and failure-handling matrix.
+`vision/app.py` wires the voice/text loop to one module per concern. Parsing is pure and offline-safe; `actions.py` performs side effects through the platform adapter, SQLite memory and the UI controller. The OpenCV hologram runs in a **separate process** so a camera or MediaPipe failure can never freeze speech, and the only cross-process contract is an atomic `state.txt`.
 
 ```mermaid
-flowchart LR
-    subgraph Main["Main process (voice loop)"]
-        MIC[Microphone] --> STT[SpeechEngine<br/>PyAudio / sounddevice]
-        STT --> PARSER[Parser<br/>rules + Hinglish]
-        PARSER --> ACTIONS[ActionExecutor]
-        ACTIONS --> LLM[OllamaClient]
-        ACTIONS --> MEM[(SQLite memory)]
-        ACTIONS --> TTS[Speaker<br/>edge-tts / native]
-        ACTIONS --> PLAT[PlatformAdapter<br/>macOS / Windows / Linux]
-        CLAP[ClapDetector thread] --> ACTIONS
-        TTS -. atomic state.txt .-> UI
-        UICTRL[InterfaceController] -. spawns .-> UI
-    end
-    subgraph Child["UI process (never blocks the voice loop)"]
-        UI[OpenCV hologram 45 fps]
-        UI --> MEDIA[MediaPipe worker thread]
-        UI --> STATE[state.txt poller]
-    end
-    PLAT --> OS[Apps, volume, screenshots,<br/>folders, battery, TTS]
+flowchart TD
+    A["vision.py (shim)"] --> B["vision/app.py<br/>CLI + voice/text loops"]
+    B --> C["audio.py<br/>capture + STT"]
+    B --> D["parser.py<br/>intent rules"]
+    B --> E["actions.py<br/>side effects"]
+    B --> F["llm.py<br/>Ollama HTTP"]
+    B --> G["tts.py<br/>edge-tts / native"]
+    E --> H["memory.py<br/>SQLite (WAL)"]
+    E --> I["platform_utils.py<br/>macOS · Windows · Linux"]
+    E --> J["ui.py<br/>subprocess controller"]
+    J --> K["interface_ui.py<br/>OpenCV + MediaPipe"]
+    G -. "state.txt (atomic)" .-> K
 ```
 
-**Why two processes?** OpenCV’s HighGUI loop must own the main thread on macOS,
-and MediaPipe model loading can take seconds. Running the UI as a child process
-means a UI crash or a stalled model never freezes speech recognition, and the
-only cross-process contract is one atomic text file (`state.txt`).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the process/thread model, SQLite schema and failure-handling matrix.
 
-**Why rule-based parsing?** Voice commands must work offline and instantly.
-The parser is deterministic and covered by tests; free-form language goes to the
-local LLM only after the rules decline.
+## Platform support
 
-## Developer guide
-
-### Setup
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-```
-
-The test suite intentionally needs **no hardware and no AI packages**:
-
-```bash
-pytest                    # 120+ tests, <1 s
-pytest --cov=vision       # coverage report
-ruff check .              # lint
-black --check .           # formatting
-```
-
-### Design rules
-
-1. **Import light.** `import vision` must never import OpenCV, MediaPipe,
-   PyAudio or Vosk. Heavy imports live inside the methods that need them.
-2. **Parse, then act.** `vision/parser.py` is pure; `vision/actions.py` performs
-   side effects. New commands get a parser test and an action test.
-3. **No shell.** Commands are argument lists passed to `subprocess.run` with
-   `shell=False` and a timeout. Never concatenate user text into a shell string.
-4. **Fail soft.** Hardware, network and file errors are logged and degrade to a
-   supported fallback; they must not crash the assistant.
-5. **One platform seam.** OS-specific behaviour belongs in
-   `vision/platform_utils.py`, never in actions or the UI.
-
-### Adding a command
-
-1. Add keywords/pattern matching in `vision/parser.py` and return an
-   `Intent("my_command", {...})`.
-2. Add `_do_my_command()` in `vision/actions.py`; speak the reply and return it.
-3. Add cases to `tests/test_parser.py` (and an action test if it touches files).
-
-### Adding an OS command
-
-Add a method to `PlatformAdapter` and implement it in `MacPlatform`,
-`WindowsPlatform` and `LinuxPlatform` (or raise/return `False` with a helpful
-warning). Then add a mapping test in `tests/test_platform_utils.py` using the
-injected recording runner — never execute real commands in tests.
-
-### Logging and diagnostics
-
-Logs go to `<DATA_DIR>/logs/vision.log` (1 MB × 5 rotations). Use
-`get_logger("module")`; never `print` for diagnostics. Run
-`python vision.py --diagnose` to print resolved configuration, platform
-capabilities and Ollama availability.
+| OS | Status | Native tools used |
+|---|---|---|
+| macOS | ✅ | `say`, `afplay`, `open`, `osascript` (volume), `screencapture` |
+| Windows | ✅ | SAPI via PowerShell, `winsound`/`ffplay`, `start`, pycaw (volume), .NET screen capture |
+| Linux | ✅ | `espeak-ng`/`spd-say`, `paplay`/`ffplay`, `xdg-open`, `pactl`/`amixer`, `gnome-screenshot`/`scrot` |
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `PyAudio` will not install | Install PortAudio first: `brew install portaudio` / `sudo apt install portaudio19-dev`. Vision automatically falls back to `sounddevice`, then to typed commands. |
-| No microphone found | Check OS privacy permissions, close Zoom/Teams, run `python vision.py --diagnose`, or use `--text`. |
-| Clap does not trigger | Lower `CLAP_THRESHOLD` (e.g. 1200); disable `CLAP_ENABLED` and use the wake phrase. |
+| `PyAudio` will not install | Install PortAudio first (`brew install portaudio`, `sudo apt install portaudio19-dev`). Vision falls back to sounddevice, then typed mode. |
+| No microphone found | Grant microphone permission to your terminal, close Zoom/Teams, run `python -m vision --doctor`, or use `--text`. |
+| Audio degraded to typed mode | No capture backend opened. Run `--doctor`; set `MICROPHONE_DEVICE` to the right index, or keep using typed commands. |
+| Clap does not trigger | Lower `CLAP_THRESHOLD` (e.g. 1200) or disable `CLAP_ENABLED` and use the wake phrase. |
 | Camera not found | Close other camera apps, grant camera permission, restart the terminal. Hand tracking is optional. |
-| Hand model download fails | Download `hand_landmarker.task` manually and put it in the cache directory printed by the error, or next to `vision/interface_ui.py`. |
-| “AI is not responding” | `ollama serve`, then `ollama list`; check `OLLAMA_HOST`/`OLLAMA_MODEL`. |
-| Voice is robotic/offline | `edge-tts` needs internet and falls back to the native voice. Set `TTS_ENGINE=native` to force offline. |
-| Windows volume does nothing | `pip install "pycaw>=20240210"` or put `nircmd.exe` on `PATH`. |
+| Hand model download fails | Download `hand_landmarker.task` manually into the cache directory printed by the error. |
+| Vosk model not found | `VOSK_MODEL_PATH` must point at the extracted model folder (the one containing `am/` and `conf/`), not the zip. |
+| Ollama not running | Start `ollama serve`; confirm with `curl http://127.0.0.1:11434/api/tags`. |
+| “AI is not responding” | `ollama list`; pull the configured model, or fix `OLLAMA_HOST`/`OLLAMA_MODEL`. |
+| Voice is robotic or offline | edge-tts needs internet; it falls back to the native voice. Set `TTS_ENGINE=native` to force offline. |
+| Windows volume does nothing | `pip install "pycaw==20260927"` or put `nircmd.exe` on `PATH`. |
 | Linux volume/screenshots fail | Install `pulseaudio-utils`/`alsa-utils` and a screenshot tool. |
-| UI window is black / no window | Ensure a desktop session (not SSH), install `opencv-python`, try `python vision.py --test-interface`. |
+| UI window is black or missing | Use a desktop session (not SSH), install `opencv-python`, and try `python -m vision --test-interface`. |
+| `--doctor` reports a failure | Each failure prints a `fix:` line; a required failure (Python or Ollama) exits non-zero. |
 
-## Security and privacy
+## Development
 
-- **No shell injection:** every command is an argv list with `shell=False`.
-- **Folder names are sanitised** (path traversal and Windows reserved names).
-- **Secrets stay in `.env`** (git-ignored); no keys are hard-coded.
-- **Cloud calls are explicit:** Google STT receives audio; edge-tts receives the
-  reply text. Use Vosk + native TTS for a fully offline setup.
-- **Local data only:** SQLite memory, logs and captures never leave the machine.
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+pytest -q                          # 142 tests, no hardware required
+ruff check .
+black --check .
+python -m build                    # sdist + wheel in dist/
+```
 
-## Contributing
+The suite injects subprocess runners, `shutil.which`, URL openers and hardware probes, so it runs on CI without a microphone, camera or network. CI lives in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) and
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Bug reports should include your OS,
-Python version, the `--diagnose` output and the tail of `vision.log`.
+## Roadmap
 
-## License
+- Offline wake-word model, so “Hey Vision” no longer needs the cloud recognizer.
+- A plugin API for third-party commands instead of editing `parser.py` and `actions.py`.
+- Native packaging (`.app` / `.exe`) with a bundled Python runtime.
+- Streaming Ollama responses to cut time-to-first-word.
 
-MIT — see [LICENSE](LICENSE).
+## License and credits
+
+MIT — see [LICENSE](LICENSE). Vision 1.2 was created by Taha Shaikh ([helloworldpsys](https://github.com/helloworldpsys)); Vision 2.0 keeps the original command set and UI while hardening the codebase for macOS, Windows and Linux.
